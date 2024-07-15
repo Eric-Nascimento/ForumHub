@@ -6,6 +6,7 @@ import br.com.alura.ForumHub.usuario.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +20,9 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("usuarios")
 public class UsuarioController {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -35,6 +39,8 @@ public class UsuarioController {
        if (exists){
            return ResponseEntity.status(HttpStatus.CONFLICT).body("E-mail já cadastrado!");
        }
+
+       usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
 
         usuarioRepository.save(usuario);
        return ResponseEntity.status(HttpStatus.CREATED).body("Usuario criado com sucesso!");
