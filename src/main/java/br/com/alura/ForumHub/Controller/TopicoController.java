@@ -9,6 +9,7 @@ import br.com.alura.ForumHub.usuario.Usuario;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,7 +35,7 @@ public class TopicoController {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-
+    @Transactional
     @PostMapping
     public ResponseEntity<String> cadastrar(@RequestBody @Validated DadosCadastroTopico dados){
         Optional<Usuario> autorOptional = usuarioRepository.findByNome(dados.getAutor());
@@ -77,6 +78,7 @@ public class TopicoController {
         return ResponseEntity.ok(topicoDto);
     }
 
+    @Transactional
     @PutMapping("/{id}")
     public ResponseEntity<String> atualizar(@PathVariable Long id, @RequestBody @Validated DadosCadastroTopico dados) {
         Optional<Topico> topicoOptional = topicoRepository.findById(id);

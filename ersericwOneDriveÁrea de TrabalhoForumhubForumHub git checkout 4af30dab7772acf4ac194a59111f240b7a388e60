@@ -1,0 +1,1241 @@
+[33mcommit 4af30dab7772acf4ac194a59111f240b7a388e60[m[33m ([m[1;36mHEAD[m[33m)[m
+Author: Eric Nascimento <ericwill_@hotmail.com>
+Date:   Mon Jul 15 10:56:31 2024 -0300
+
+    CRUD topico e cadastro/consulta de usuario
+
+[1mdiff --git a/pom.xml b/pom.xml[m
+[1mindex 0513167..988a0d5 100644[m
+[1m--- a/pom.xml[m
+[1m+++ b/pom.xml[m
+[36m@@ -66,11 +66,19 @@[m
+ 			<artifactId>mysql-connector-j</artifactId>[m
+ 			<scope>runtime</scope>[m
+ 		</dependency>[m
+[32m+[m
+ 		<dependency>[m
+ 			<groupId>org.projectlombok</groupId>[m
+ 			<artifactId>lombok</artifactId>[m
+[31m-			<optional>true</optional>[m
+[32m+[m			[32m<version>1.18.20</version>[m
+[32m+[m			[32m<scope>provided</scope>[m
+ 		</dependency>[m
+[32m+[m
+[32m+[m[32m<!--		<dependency>-->[m
+[32m+[m[32m<!--			<groupId>org.projectlombok</groupId>-->[m
+[32m+[m[32m<!--			<artifactId>lombok</artifactId>-->[m
+[32m+[m[32m<!--			<optional>true</optional>-->[m
+[32m+[m[32m<!--		</dependency>-->[m
+ 		<dependency>[m
+ 			<groupId>org.springframework.boot</groupId>[m
+ 			<artifactId>spring-boot-starter-test</artifactId>[m
+[36m@@ -88,14 +96,14 @@[m
+ 			<plugin>[m
+ 				<groupId>org.springframework.boot</groupId>[m
+ 				<artifactId>spring-boot-maven-plugin</artifactId>[m
+[31m-				<configuration>[m
+[31m-					<excludes>[m
+[31m-						<exclude>[m
+[31m-							<groupId>org.projectlombok</groupId>[m
+[31m-							<artifactId>lombok</artifactId>[m
+[31m-						</exclude>[m
+[31m-					</excludes>[m
+[31m-				</configuration>[m
+[32m+[m[32m<!--				<configuration>-->[m
+[32m+[m[32m<!--					<excludes>-->[m
+[32m+[m[32m<!--						<exclude>-->[m
+[32m+[m[32m<!--							<groupId>org.projectlombok</groupId>-->[m
+[32m+[m[32m<!--							<artifactId>lombok</artifactId>-->[m
+[32m+[m[32m<!--						</exclude>-->[m
+[32m+[m[32m<!--					</excludes>-->[m
+[32m+[m[32m<!--				</configuration>-->[m
+ 			</plugin>[m
+ 		</plugins>[m
+ 	</build>[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/Controller/TopicoController.java b/src/main/java/br/com/alura/ForumHub/Controller/TopicoController.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7f56e02[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/Controller/TopicoController.java[m
+[36m@@ -0,0 +1,122 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.Controller;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.DTO.TopicoDto;[m
+[32m+[m[32mimport br.com.alura.ForumHub.repository.TopicoRepository;[m
+[32m+[m[32mimport br.com.alura.ForumHub.repository.UsuarioRepository;[m
+[32m+[m[32mimport br.com.alura.ForumHub.topico.DadosCadastroTopico;[m
+[32m+[m[32mimport br.com.alura.ForumHub.topico.Topico;[m
+[32m+[m[32mimport br.com.alura.ForumHub.usuario.Usuario;[m
+[32m+[m[32mimport org.springframework.beans.factory.annotation.Autowired;[m
+[32m+[m[32mimport org.springframework.http.HttpStatus;[m
+[32m+[m[32mimport org.springframework.http.ResponseEntity;[m
+[32m+[m[32mimport org.springframework.validation.annotation.Validated;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.DeleteMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.GetMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.PathVariable;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.PostMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.PutMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestBody;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.ResponseBody;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RestController;[m
+[32m+[m
+[32m+[m[32mimport java.util.List;[m
+[32m+[m[32mimport java.util.Optional;[m
+[32m+[m[32mimport java.util.stream.Collectors;[m
+[32m+[m
+[32m+[m[32m@RestController[m
+[32m+[m[32m@RequestMapping("topicos")[m
+[32m+[m[32mpublic class TopicoController {[m
+[32m+[m
+[32m+[m[32m    @Autowired[m
+[32m+[m[32m    private TopicoRepository topicoRepository;[m
+[32m+[m
+[32m+[m[32m    @Autowired[m
+[32m+[m[32m    private UsuarioRepository usuarioRepository;[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    @PostMapping[m
+[32m+[m[32m    public ResponseEntity<String> cadastrar(@RequestBody @Validated DadosCadastroTopico dados){[m
+[32m+[m[32m        Optional<Usuario> autorOptional = usuarioRepository.findByNome(dados.getAutor());[m
+[32m+[m[32m        if (!autorOptional.isPresent()){[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Autor não encontrado!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        Usuario autor = autorOptional.get();[m
+[32m+[m
+[32m+[m[32m        boolean exists = topicoRepository.existsByTituloAndMensagem(dados.getTitulo(), dados.getMensagem());[m
+[32m+[m[32m        if (exists){[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.CONFLICT).body("Tópico duplicado");[m
+[32m+[m[32m        }[m
+[32m+[m[32m        Topico topico = new Topico();[m
+[32m+[m[32m        topico.setTitulo(dados.getTitulo());[m
+[32m+[m[32m        topico.setMensagem(dados.getMensagem());[m
+[32m+[m[32m        topico.setAutor(autor);[m
+[32m+[m[32m        topico.setCurso(dados.getCurso());[m
+[32m+[m
+[32m+[m[32m        topicoRepository.save(topico);[m
+[32m+[m
+[32m+[m[32m        return ResponseEntity.status(HttpStatus.CREATED).body("Tópico criado com sucesso");[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @GetMapping[m
+[32m+[m[32m    public List<TopicoDto> listar(){[m
+[32m+[m[32m        List<Topico> topicos = topicoRepository.findAll();[m
+[32m+[m[32m        return topicos.stream().map(TopicoDto::new).collect(Collectors.toList());[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @GetMapping("/{id}")[m
+[32m+[m[32m    public ResponseEntity<?> datalhar(@PathVariable Long id) {[m
+[32m+[m[32m        Optional<Topico> topicoOptional = topicoRepository.findById(id);[m
+[32m+[m[32m        if (!topicoOptional.isPresent()) {[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ID não encontrado!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        Topico topico = topicoOptional.get();[m
+[32m+[m[32m        TopicoDto topicoDto = new TopicoDto(topico);[m
+[32m+[m[32m        return ResponseEntity.ok(topicoDto);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @PutMapping("/{id}")[m
+[32m+[m[32m    public ResponseEntity<String> atualizar(@PathVariable Long id, @RequestBody @Validated DadosCadastroTopico dados) {[m
+[32m+[m[32m        Optional<Topico> topicoOptional = topicoRepository.findById(id);[m
+[32m+[m[32m        if (!topicoOptional.isPresent()) {[m
+[32m+[m[32m            return  ResponseEntity.status(HttpStatus.NOT_FOUND).body("ID não encontrado!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        Topico topico = topicoOptional.get();[m
+[32m+[m
+[32m+[m[32m        Optional<Usuario>  autorOptional = usuarioRepository.findByNome(dados.getAutor());[m
+[32m+[m[32m        if (!autorOptional.isPresent()){[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Autor não encontrado!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        Usuario autor = autorOptional.get();[m
+[32m+[m
+[32m+[m[32m        boolean exists = topicoRepository.existsByTituloAndMensagemAndIdNot(dados.getTitulo(), dados.getMensagem(), id);[m
+[32m+[m[32m        if (exists) {[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.CONFLICT).body("Tópico duplicado!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        topico.setTitulo(dados.getTitulo());[m
+[32m+[m[32m        topico.setMensagem(dados.getMensagem());[m
+[32m+[m[32m        topico.setAutor(autor);[m
+[32m+[m[32m        topico.setCurso(dados.getCurso());[m
+[32m+[m
+[32m+[m[32m        topicoRepository.save(topico);[m
+[32m+[m
+[32m+[m[32m        return ResponseEntity.ok("Tópico atualizado com sucesso!");[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @DeleteMapping("/{id}")[m
+[32m+[m[32m    public ResponseEntity<String> excluir(@PathVariable Long id){[m
+[32m+[m[32m        Optional<Topico> topicoOptional = topicoRepository.findById(id);[m
+[32m+[m[32m        if (!topicoOptional.isPresent()) {[m
+[32m+[m[32m            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("ID não encontrada!");[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        topicoRepository.deleteById(id);[m
+[32m+[m[32m        return ResponseEntity.ok("Tópico excluido com sucesso!");[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/Controller/UsuarioController.java b/src/main/java/br/com/alura/ForumHub/Controller/UsuarioController.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8b68d5e[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/Controller/UsuarioController.java[m
+[36m@@ -0,0 +1,42 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.Controller;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.DTO.UsuarioDto;[m
+[32m+[m[32mimport br.com.alura.ForumHub.repository.UsuarioRepository;[m
+[32m+[m[32mimport br.com.alura.ForumHub.usuario.Usuario;[m
+[32m+[m[32mimport org.springframework.beans.factory.annotation.Autowired;[m
+[32m+[m[32mimport org.springframework.http.HttpStatus;[m
+[32m+[m[32mimport org.springframework.http.ResponseEntity;[m
+[32m+[m[32mimport org.springframework.validation.annotation.Validated;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.GetMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.PostMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestBody;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RestController;[m
+[32m+[m
+[32m+[m[32mimport java.util.List;[m
+[32m+[m[32mimport java.util.stream.Collectors;[m
+[32m+[m
+[32m+[m[32m@RestController[m
+[32m+[m[32m@RequestMapping("usuarios")[m
+[32m+[m[32mpublic class UsuarioController {[m
+[32m+[m
+[32m+[m[32m    @Autowired[m
+[32m+[m[32m    private UsuarioRepository usuarioRepository;[m
+[32m+[m
+[32m+[m[32m    @GetMapping[m
+[32m+[m[32m    public List<UsuarioDto> listar(){[m
+[32m+[m[32m        List<Usuario> usuarios = usuarioRepository.findAll();[m
+[32m+[m[32m        return usuarios.stream().map(UsuarioDto::new).collect(Collectors.toList());[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m   @PostMapping[m
+[32m+[m[32m    public ResponseEntity<String> cadastrar(@RequestBody @Validated Usuario usuario){[m
+[32m+[m[32m       boolean exists = usuarioRepository.existsByEmail(usuario.getEmail());[m
+[32m+[m[32m       if (exists){[m
+[32m+[m[32m           return ResponseEntity.status(HttpStatus.CONFLICT).body("E-mail já cadastrado!");[m
+[32m+[m[32m       }[m
+[32m+[m
+[32m+[m[32m        usuarioRepository.save(usuario);[m
+[32m+[m[32m       return ResponseEntity.status(HttpStatus.CREATED).body("Usuario criado com sucesso!");[m
+[32m+[m[32m   }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/DTO/TopicoDto.java b/src/main/java/br/com/alura/ForumHub/DTO/TopicoDto.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..02688fb[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/DTO/TopicoDto.java[m
+[36m@@ -0,0 +1,30 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.DTO;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.curso.CursoEnum;[m
+[32m+[m[32mimport br.com.alura.ForumHub.topico.Topico;[m
+[32m+[m[32mimport lombok.AllArgsConstructor;[m
+[32m+[m[32mimport lombok.Getter;[m
+[32m+[m[32mimport lombok.NoArgsConstructor;[m
+[32m+[m
+[32m+[m[32mimport java.time.LocalDateTime;[m
+[32m+[m
+[32m+[m[32m@Getter[m
+[32m+[m[32m@AllArgsConstructor[m
+[32m+[m[32m@NoArgsConstructor[m
+[32m+[m[32mpublic class TopicoDto{[m
+[32m+[m[32m    private String titulo;[m
+[32m+[m[32m    private String mensagem;[m
+[32m+[m[32m    private LocalDateTime dataCriacao;[m
+[32m+[m[32m    private String status;[m
+[32m+[m[32m    private UsuarioDto autor;[m
+[32m+[m[32m    private CursoEnum curso;[m
+[32m+[m
+[32m+[m[32m    public TopicoDto(Topico topico){[m
+[32m+[m[32m        this.titulo = topico.getTitulo();[m
+[32m+[m[32m        this.mensagem = topico.getMensagem();[m
+[32m+[m[32m        this.dataCriacao = topico.getDataCriacao();[m
+[32m+[m[32m        this.status = topico.getStatus();[m
+[32m+[m[32m        this.autor = new UsuarioDto(topico.getAutor());[m
+[32m+[m[32m        this.curso = topico.getCurso();[m
+[32m+[m[32m   }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/DTO/UsuarioDto.java b/src/main/java/br/com/alura/ForumHub/DTO/UsuarioDto.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..fa70305[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/DTO/UsuarioDto.java[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.DTO;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.usuario.Usuario;[m
+[32m+[m[32mimport lombok.AllArgsConstructor;[m
+[32m+[m[32mimport lombok.Getter;[m
+[32m+[m[32mimport lombok.NoArgsConstructor;[m
+[32m+[m
+[32m+[m[32m@Getter[m
+[32m+[m[32m@AllArgsConstructor[m
+[32m+[m[32m@NoArgsConstructor[m
+[32m+[m[32mpublic class UsuarioDto{[m
+[32m+[m[32m      private String nome;[m
+[32m+[m[32m      private String email;[m
+[32m+[m
+[32m+[m[32m    public UsuarioDto(Usuario usuario){[m
+[32m+[m[32m         this.nome = usuario.getNome();[m
+[32m+[m[32m           this.email = usuario.getEmail();[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/curso/CursoEnum.java b/src/main/java/br/com/alura/ForumHub/curso/CursoEnum.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..25b9748[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/curso/CursoEnum.java[m
+[36m@@ -0,0 +1,7 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.curso;[m
+[32m+[m
+[32m+[m[32mpublic enum CursoEnum {[m
+[32m+[m[32m    JAVA,[m
+[32m+[m[32m    PYTHON,[m
+[32m+[m[32m    JAVASCRIPT[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/repository/TopicoRepository.java b/src/main/java/br/com/alura/ForumHub/repository/TopicoRepository.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..6c3f6a4[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/repository/TopicoRepository.java[m
+[36m@@ -0,0 +1,9 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.repository;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.topico.Topico;[m
+[32m+[m[32mimport org.springframework.data.jpa.repository.JpaRepository;[m
+[32m+[m
+[32m+[m[32mpublic interface TopicoRepository extends JpaRepository<Topico, Long> {[m
+[32m+[m[32m    boolean existsByTituloAndMensagem(String titulo, String mensagem);[m
+[32m+[m[32m    boolean existsByTituloAndMensagemAndIdNot(String titulo, String mensagem, Long id);[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/repository/UsuarioRepository.java b/src/main/java/br/com/alura/ForumHub/repository/UsuarioRepository.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f5d355a[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/repository/UsuarioRepository.java[m
+[36m@@ -0,0 +1,12 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.repository;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.usuario.Usuario;[m
+[32m+[m[32mimport org.springframework.data.jpa.repository.JpaRepository;[m
+[32m+[m
+[32m+[m[32mimport java.util.Optional;[m
+[32m+[m
+[32m+[m[32mpublic interface UsuarioRepository extends JpaRepository<Usuario, Long> {[m
+[32m+[m[32m    boolean existsByEmail(String email);[m
+[32m+[m
+[32m+[m[32m    Optional<Usuario> findByNome(String autor);[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/topico/DadosCadastroTopico.java b/src/main/java/br/com/alura/ForumHub/topico/DadosCadastroTopico.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..04dc5be[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/topico/DadosCadastroTopico.java[m
+[36m@@ -0,0 +1,26 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.topico;[m
+[32m+[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.curso.CursoEnum;[m
+[32m+[m[32mimport jakarta.validation.constraints.NotBlank;[m
+[32m+[m[32mimport jakarta.validation.constraints.NotNull;[m
+[32m+[m[32mimport lombok.AllArgsConstructor;[m
+[32m+[m[32mimport lombok.Data;[m
+[32m+[m[32mimport lombok.NoArgsConstructor;[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@Data[m
+[32m+[m[32m@NoArgsConstructor[m
+[32m+[m[32m@AllArgsConstructor[m
+[32m+[m[32mpublic class DadosCadastroTopico{[m
+[32m+[m[32m                                 @NotBlank[m
+[32m+[m[32m                                 private String titulo;[m
+[32m+[m[32m                                 @NotBlank[m
+[32m+[m[32m                                 private String mensagem;[m
+[32m+[m[32m                                 @NotBlank[m
+[32m+[m[32m                                 private String autor;[m
+[32m+[m[32m                                 @NotNull[m
+[32m+[m[32m                                 private CursoEnum curso;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/topico/Topico.java b/src/main/java/br/com/alura/ForumHub/topico/Topico.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..41baedf[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/topico/Topico.java[m
+[36m@@ -0,0 +1,63 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.topico;[m
+[32m+[m
+[32m+[m[32mimport br.com.alura.ForumHub.curso.CursoEnum;[m
+[32m+[m[32mimport br.com.alura.ForumHub.usuario.Usuario;[m
+[32m+[m[32mimport jakarta.persistence.Column;[m
+[32m+[m[32mimport jakarta.persistence.Entity;[m
+[32m+[m[32mimport jakarta.persistence.EnumType;[m
+[32m+[m[32mimport jakarta.persistence.Enumerated;[m
+[32m+[m[32mimport jakarta.persistence.GeneratedValue;[m
+[32m+[m[32mimport jakarta.persistence.GenerationType;[m
+[32m+[m[32mimport jakarta.persistence.Id;[m
+[32m+[m[32mimport jakarta.persistence.JoinColumn;[m
+[32m+[m[32mimport jakarta.persistence.Lob;[m
+[32m+[m[32mimport jakarta.persistence.ManyToOne;[m
+[32m+[m[32mimport jakarta.persistence.PrePersist;[m
+[32m+[m[32mimport jakarta.validation.constraints.NotBlank;[m
+[32m+[m[32mimport jakarta.validation.constraints.NotNull;[m
+[32m+[m[32mimport lombok.AllArgsConstructor;[m
+[32m+[m[32mimport lombok.Data;[m
+[32m+[m[32mimport lombok.NoArgsConstructor;[m
+[32m+[m
+[32m+[m[32mimport java.time.LocalDateTime;[m
+[32m+[m
+[32m+[m[32m@Data[m
+[32m+[m[32m@Entity[m
+[32m+[m[32m@NoArgsConstructor[m
+[32m+[m[32m@AllArgsConstructor[m
+[32m+[m[32mpublic class Topico {[m
+[32m+[m
+[32m+[m[32m    @Id[m
+[32m+[m[32m    @GeneratedValue(strategy = GenerationType.IDENTITY)[m
+[32m+[m[32m    private Long id;[m
+[32m+[m
+[32m+[m[32m    @NotBlank[m
+[32m+[m[32m    private String titulo;[m
+[32m+[m
+[32m+[m[32m    @NotBlank[m
+[32m+[m[32m    @Lob[m
+[32m+[m[32m    private String mensagem;[m
+[32m+[m
+[32m+[m[32m    @NotNull[m
+[32m+[m[32m    @Column(name = "data_criacao")[m
+[32m+[m[32m    private LocalDateTime dataCriacao;[m
+[32m+[m
+[32m+[m[32m    @NotNull[m
+[32m+[m[32m    private String status;[m
+[32m+[m
+[32m+[m[32m    @NotNull[m
+[32m+[m[32m    @ManyToOne[m
+[32m+[m[32m    @JoinColumn(name = "autor")[m
+[32m+[m[32m    private Usuario autor;[m
+[32m+[m
+[32m+[m[32m    @NotNull[m
+[32m+[m[32m    @Enumerated(EnumType.STRING)[m
+[32m+[m[32m    private CursoEnum curso;[m
+[32m+[m
+[32m+[m[32m    @PrePersist[m
+[32m+[m[32m    protected void onCreate(){[m
+[32m+[m[32m        dataCriacao = LocalDateTime.now();[m
+[32m+[m[32m        status = "ATIVO";[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/usuario/Usuario.java b/src/main/java/br/com/alura/ForumHub/usuario/Usuario.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..5fa5ea7[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/usuario/Usuario.java[m
+[36m@@ -0,0 +1,34 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub.usuario;[m
+[32m+[m
+[32m+[m[32mimport jakarta.persistence.Column;[m
+[32m+[m[32mimport jakarta.persistence.Entity;[m
+[32m+[m[32mimport jakarta.persistence.GeneratedValue;[m
+[32m+[m[32mimport jakarta.persistence.GenerationType;[m
+[32m+[m[32mimport jakarta.persistence.Id;[m
+[32m+[m[32mimport jakarta.validation.constraints.NotBlank;[m
+[32m+[m[32mimport lombok.AllArgsConstructor;[m
+[32m+[m[32mimport lombok.Data;[m
+[32m+[m[32mimport lombok.NoArgsConstructor;[m
+[32m+[m
+[32m+[m[32m@Data[m
+[32m+[m[32m@Entity[m
+[32m+[m[32m@NoArgsConstructor[m
+[32m+[m[32m@AllArgsConstructor[m
+[32m+[m[32mpublic class Usuario {[m
+[32m+[m
+[32m+[m[32m    @Id[m
+[32m+[m[32m    @GeneratedValue(strategy = GenerationType.IDENTITY)[m
+[32m+[m[32m    private Long id;[m
+[32m+[m
+[32m+[m[32m    @NotBlank[m
+[32m+[m[32m    private String nome;[m
+[32m+[m
+[32m+[m[32m    @NotBlank[m
+[32m+[m[32m    @Column(nullable = false, unique = true)[m
+[32m+[m[32m    private String email;[m
+[32m+[m
+[32m+[m[32m    @NotBlank[m
+[32m+[m[32m    @Column(nullable = false)[m
+[32m+[m[32m    private String senha;[m
+[32m+[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/resources/db/migration/V7__alter-table-topico-rename-datacriacao.sql b/src/main/resources/db/migration/V7__alter-table-topico-rename-datacriacao.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..eed2f4c[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V7__alter-table-topico-rename-datacriacao.sql[m
+[36m@@ -0,0 +1 @@[m
+[32m+[m[32mALTER TABLE topico CHANGE COLUMN dataCriacao data_criacao DATETIME NOT NULL;[m
+[1mdiff --git a/src/main/resources/db/migration/V8__alter-curso-column-key.sql b/src/main/resources/db/migration/V8__alter-curso-column-key.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..fcbfd1a[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V8__alter-curso-column-key.sql[m
+[36m@@ -0,0 +1,2 @@[m
+[32m+[m[32mALTER TABLE topico DROP FOREIGN KEY topico_ibfk_2;[m
+[32m+[m[32mALTER TABLE topico MODIFY COLUMN curso VARCHAR(255) NOT NULL;[m
+
+[33mcommit 8762519e7ee1e3417c3c617e99c4652f2f8d69b5[m
+Author: Eric Nascimento <ericwill_@hotmail.com>
+Date:   Thu Jul 11 09:33:41 2024 -0300
+
+    Primeiro commit
+
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mnew file mode 100644[m
+[1mindex 0000000..549e00a[m
+[1m--- /dev/null[m
+[1m+++ b/.gitignore[m
+[36m@@ -0,0 +1,33 @@[m
+[32m+[m[32mHELP.md[m
+[32m+[m[32mtarget/[m
+[32m+[m[32m!.mvn/wrapper/maven-wrapper.jar[m
+[32m+[m[32m!**/src/main/**/target/[m
+[32m+[m[32m!**/src/test/**/target/[m
+[32m+[m
+[32m+[m[32m### STS ###[m
+[32m+[m[32m.apt_generated[m
+[32m+[m[32m.classpath[m
+[32m+[m[32m.factorypath[m
+[32m+[m[32m.project[m
+[32m+[m[32m.settings[m
+[32m+[m[32m.springBeans[m
+[32m+[m[32m.sts4-cache[m
+[32m+[m
+[32m+[m[32m### IntelliJ IDEA ###[m
+[32m+[m[32m.idea[m
+[32m+[m[32m*.iws[m
+[32m+[m[32m*.iml[m
+[32m+[m[32m*.ipr[m
+[32m+[m
+[32m+[m[32m### NetBeans ###[m
+[32m+[m[32m/nbproject/private/[m
+[32m+[m[32m/nbbuild/[m
+[32m+[m[32m/dist/[m
+[32m+[m[32m/nbdist/[m
+[32m+[m[32m/.nb-gradle/[m
+[32m+[m[32mbuild/[m
+[32m+[m[32m!**/src/main/**/build/[m
+[32m+[m[32m!**/src/test/**/build/[m
+[32m+[m
+[32m+[m[32m### VS Code ###[m
+[32m+[m[32m.vscode/[m
+[1mdiff --git a/.mvn/wrapper/maven-wrapper.properties b/.mvn/wrapper/maven-wrapper.properties[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8f96f52[m
+[1m--- /dev/null[m
+[1m+++ b/.mvn/wrapper/maven-wrapper.properties[m
+[36m@@ -0,0 +1,19 @@[m
+[32m+[m[32m# Licensed to the Apache Software Foundation (ASF) under one[m
+[32m+[m[32m# or more contributor license agreements.  See the NOTICE file[m
+[32m+[m[32m# distributed with this work for additional information[m
+[32m+[m[32m# regarding copyright ownership.  The ASF licenses this file[m
+[32m+[m[32m# to you under the Apache License, Version 2.0 (the[m
+[32m+[m[32m# "License"); you may not use this file except in compliance[m
+[32m+[m[32m# with the License.  You may obtain a copy of the License at[m
+[32m+[m[32m#[m
+[32m+[m[32m#   https://www.apache.org/licenses/LICENSE-2.0[m
+[32m+[m[32m#[m
+[32m+[m[32m# Unless required by applicable law or agreed to in writing,[m
+[32m+[m[32m# software distributed under the License is distributed on an[m
+[32m+[m[32m# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY[m
+[32m+[m[32m# KIND, either express or implied.  See the License for the[m
+[32m+[m[32m# specific language governing permissions and limitations[m
+[32m+[m[32m# under the License.[m
+[32m+[m[32mwrapperVersion=3.3.2[m
+[32m+[m[32mdistributionType=only-script[m
+[32m+[m[32mdistributionUrl=https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.7/apache-maven-3.9.7-bin.zip[m
+[1mdiff --git a/mvnw b/mvnw[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d7c358e[m
+[1m--- /dev/null[m
+[1m+++ b/mvnw[m
+[36m@@ -0,0 +1,259 @@[m
+[32m+[m[32m#!/bin/sh[m
+[32m+[m[32m# ----------------------------------------------------------------------------[m
+[32m+[m[32m# Licensed to the Apache Software Foundation (ASF) under one[m
+[32m+[m[32m# or more contributor license agreements.  See the NOTICE file[m
+[32m+[m[32m# distributed with this work for additional information[m
+[32m+[m[32m# regarding copyright ownership.  The ASF licenses this file[m
+[32m+[m[32m# to you under the Apache License, Version 2.0 (the[m
+[32m+[m[32m# "License"); you may not use this file except in compliance[m
+[32m+[m[32m# with the License.  You may obtain a copy of the License at[m
+[32m+[m[32m#[m
+[32m+[m[32m#    https://www.apache.org/licenses/LICENSE-2.0[m
+[32m+[m[32m#[m
+[32m+[m[32m# Unless required by applicable law or agreed to in writing,[m
+[32m+[m[32m# software distributed under the License is distributed on an[m
+[32m+[m[32m# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY[m
+[32m+[m[32m# KIND, either express or implied.  See the License for the[m
+[32m+[m[32m# specific language governing permissions and limitations[m
+[32m+[m[32m# under the License.[m
+[32m+[m[32m# ----------------------------------------------------------------------------[m
+[32m+[m
+[32m+[m[32m# ----------------------------------------------------------------------------[m
+[32m+[m[32m# Apache Maven Wrapper startup batch script, version 3.3.2[m
+[32m+[m[32m#[m
+[32m+[m[32m# Optional ENV vars[m
+[32m+[m[32m# -----------------[m
+[32m+[m[32m#   JAVA_HOME - location of a JDK home dir, required when download maven via java source[m
+[32m+[m[32m#   MVNW_REPOURL - repo url base for downloading maven distribution[m
+[32m+[m[32m#   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven[m
+[32m+[m[32m#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output[m
+[32m+[m[32m# ----------------------------------------------------------------------------[m
+[32m+[m
+[32m+[m[32mset -euf[m
+[32m+[m[32m[ "${MVNW_VERBOSE-}" != debug ] || set -x[m
+[32m+[m
+[32m+[m[32m# OS specific support.[m
+[32m+[m[32mnative_path() { printf %s\\n "$1"; }[m
+[32m+[m[32mcase "$(uname)" in[m
+[32m+[m[32mCYGWIN* | MINGW*)[m
+[32m+[m[32m  [ -z "${JAVA_HOME-}" ] || JAVA_HOME="$(cygpath --unix "$JAVA_HOME")"[m
+[32m+[m[32m  native_path() { cygpath --path --windows "$1"; }[m
+[32m+[m[32m  ;;[m
+[32m+[m[32mesac[m
+[32m+[m
+[32m+[m[32m# set JAVACMD and JAVACCMD[m
+[32m+[m[32mset_java_home() {[m
+[32m+[m[32m  # For Cygwin and MinGW, ensure paths are in Unix format before anything is touched[m
+[32m+[m[32m  if [ -n "${JAVA_HOME-}" ]; then[m
+[32m+[m[32m    if [ -x "$JAVA_HOME/jre/sh/java" ]; then[m
+[32m+[m[32m      # IBM's JDK on AIX uses strange locations for the executables[m
+[32m+[m[32m      JAVACMD="$JAVA_HOME/jre/sh/java"[m
+[32m+[m[32m      JAVACCMD="$JAVA_HOME/jre/sh/javac"[m
+[32m+[m[32m    else[m
+[32m+[m[32m      JAVACMD="$JAVA_HOME/bin/java"[m
+[32m+[m[32m      JAVACCMD="$JAVA_HOME/bin/javac"[m
+[32m+[m
+[32m+[m[32m      if [ ! -x "$JAVACMD" ] || [ ! -x "$JAVACCMD" ]; then[m
+[32m+[m[32m        echo "The JAVA_HOME environment variable is not defined correctly, so mvnw cannot run." >&2[m
+[32m+[m[32m        echo "JAVA_HOME is set to \"$JAVA_HOME\", but \"\$JAVA_HOME/bin/java\" or \"\$JAVA_HOME/bin/javac\" does not exist." >&2[m
+[32m+[m[32m        return 1[m
+[32m+[m[32m      fi[m
+[32m+[m[32m    fi[m
+[32m+[m[32m  else[m
+[32m+[m[32m    JAVACMD="$([m
+[32m+[m[32m      'set' +e[m
+[32m+[m[32m      'unset' -f command 2>/dev/null[m
+[32m+[m[32m      'command' -v java[m
+[32m+[m[32m    )" || :[m
+[32m+[m[32m    JAVACCMD="$([m
+[32m+[m[32m      'set' +e[m
+[32m+[m[32m      'unset' -f command 2>/dev/null[m
+[32m+[m[32m      'command' -v javac[m
+[32m+[m[32m    )" || :[m
+[32m+[m
+[32m+[m[32m    if [ ! -x "${JAVACMD-}" ] || [ ! -x "${JAVACCMD-}" ]; then[m
+[32m+[m[32m      echo "The java/javac command does not exist in PATH nor is JAVA_HOME set, so mvnw cannot run." >&2[m
+[32m+[m[32m      return 1[m
+[32m+[m[32m    fi[m
+[32m+[m[32m  fi[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# hash string like Java String::hashCode[m
+[32m+[m[32mhash_string() {[m
+[32m+[m[32m  str="${1:-}" h=0[m
+[32m+[m[32m  while [ -n "$str" ]; do[m
+[32m+[m[32m    char="${str%"${str#?}"}"[m
+[32m+[m[32m    h=$(((h * 31 + $(LC_CTYPE=C printf %d "'$char")) % 4294967296))[m
+[32m+[m[32m    str="${str#?}"[m
+[32m+[m[32m  done[m
+[32m+[m[32m  printf %x\\n $h[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mverbose() { :; }[m
+[32m+[m[32m[ "${MVNW_VERBOSE-}" != true ] || verbose() { printf %s\\n "${1-}"; }[m
+[32m+[m
+[32m+[m[32mdie() {[m
+[32m+[m[32m  printf %s\\n "$1" >&2[m
+[32m+[m[32m  exit 1[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mtrim() {[m
+[32m+[m[32m  # MWRAPPER-139:[m
+[32m+[m[32m  #   Trims trailing and leading whitespace, carriage returns, tabs, and linefeeds.[m
+[32m+[m[32m  #   Needed for removing poorly interpreted newline sequences when running in more[m
+[32m+[m[32m  #   exotic environments such as mingw bash on Windows.[m
+[32m+[m[32m  printf "%s" "${1}" | tr -d '[:space:]'[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# parse distributionUrl and optional distributionSha256Sum, requires .mvn/wrapper/maven-wrapper.properties[m
+[32m+[m[32mwhile IFS="=" read -r key value; do[m
+[32m+[m[32m  case "${key-}" in[m
+[32m+[m[32m  distributionUrl) distributionUrl=$(trim "${value-}") ;;[m
+[32m+[m[32m  distributionSha256Sum) distributionSha256Sum=$(trim "${value-}") ;;[m
+[32m+[m[32m  esac[m
+[32m+[m[32mdone <"${0%/*}/.mvn/wrapper/maven-wrapper.properties"[m
+[32m+[m[32m[ -n "${distributionUrl-}" ] || die "cannot read distributionUrl property in ${0%/*}/.mvn/wrapper/maven-wrapper.properties"[m
+[32m+[m
+[32m+[m[32mcase "${distributionUrl##*/}" in[m
+[32m+[m[32mmaven-mvnd-*bin.*)[m
+[32m+[m[32m  MVN_CMD=mvnd.sh _MVNW_REPO_PATTERN=/maven/mvnd/[m
+[32m+[m[32m  case "${PROCESSOR_ARCHITECTURE-}${PROCESSOR_ARCHITEW6432-}:$(uname -a)" in[m
+[32m+[m[32m  *AMD64:CYGWIN* | *AMD64:MINGW*) distributionPlatform=windows-amd64 ;;[m
+[32m+[m[32m  :Darwin*x86_64) distributionPlatform=darwin-amd64 ;;[m
+[32m+[m[32m  :Darwin*arm64) distributionPlatform=darwin-aarch64 ;;[m
+[32m+[m[32m  :Linux*x86_64*) distributionPlatform=linux-amd64 ;;[m
+[32m+[m[32m  *)[m
+[32m+[m[32m    echo "Cannot detect native platform for mvnd on $(uname)-$(uname -m), use pure java version" >&2[m
+[32m+[m[32m    distributionPlatform=linux-amd64[m
+[32m+[m[32m    ;;[m
+[32m+[m[32m  esac[m
+[32m+[m[32m  distributionUrl="${distributionUrl%-bin.*}-$distributionPlatform.zip"[m
+[32m+[m[32m  ;;[m
+[32m+[m[32mmaven-mvnd-*) MVN_CMD=mvnd.sh _MVNW_REPO_PATTERN=/maven/mvnd/ ;;[m
+[32m+[m[32m*) MVN_CMD="mvn${0##*/mvnw}" _MVNW_REPO_PATTERN=/org/apache/maven/ ;;[m
+[32m+[m[32mesac[m
+[32m+[m
+[32m+[m[32m# apply MVNW_REPOURL and calculate MAVEN_HOME[m
+[32m+[m[32m# maven home pattern: ~/.m2/wrapper/dists/{apache-maven-<version>,maven-mvnd-<version>-<platform>}/<hash>[m
+[32m+[m[32m[ -z "${MVNW_REPOURL-}" ] || distributionUrl="$MVNW_REPOURL$_MVNW_REPO_PATTERN${distributionUrl#*"$_MVNW_REPO_PATTERN"}"[m
+[32m+[m[32mdistributionUrlName="${distributionUrl##*/}"[m
+[32m+[m[32mdistributionUrlNameMain="${distributionUrlName%.*}"[m
+[32m+[m[32mdistributionUrlNameMain="${distributionUrlNameMain%-bin}"[m
+[32m+[m[32mMAVEN_USER_HOME="${MAVEN_USER_HOME:-${HOME}/.m2}"[m
+[32m+[m[32mMAVEN_HOME="${MAVEN_USER_HOME}/wrapper/dists/${distributionUrlNameMain-}/$(hash_string "$distributionUrl")"[m
+[32m+[m
+[32m+[m[32mexec_maven() {[m
+[32m+[m[32m  unset MVNW_VERBOSE MVNW_USERNAME MVNW_PASSWORD MVNW_REPOURL || :[m
+[32m+[m[32m  exec "$MAVEN_HOME/bin/$MVN_CMD" "$@" || die "cannot exec $MAVEN_HOME/bin/$MVN_CMD"[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mif [ -d "$MAVEN_HOME" ]; then[m
+[32m+[m[32m  verbose "found existing MAVEN_HOME at $MAVEN_HOME"[m
+[32m+[m[32m  exec_maven "$@"[m
+[32m+[m[32mfi[m
+[32m+[m
+[32m+[m[32mcase "${distributionUrl-}" in[m
+[32m+[m[32m*?-bin.zip | *?maven-mvnd-?*-?*.zip) ;;[m
+[32m+[m[32m*) die "distributionUrl is not valid, must match *-bin.zip or maven-mvnd-*.zip, but found '${distributionUrl-}'" ;;[m
+[32m+[m[32mesac[m
+[32m+[m
+[32m+[m[32m# prepare tmp dir[m
+[32m+[m[32mif TMP_DOWNLOAD_DIR="$(mktemp -d)" && [ -d "$TMP_DOWNLOAD_DIR" ]; then[m
+[32m+[m[32m  clean() { rm -rf -- "$TMP_DOWNLOAD_DIR"; }[m
+[32m+[m[32m  trap clean HUP INT TERM EXIT[m
+[32m+[m[32melse[m
+[32m+[m[32m  die "cannot create temp dir"[m
+[32m+[m[32mfi[m
+[32m+[m
+[32m+[m[32mmkdir -p -- "${MAVEN_HOME%/*}"[m
+[32m+[m
+[32m+[m[32m# Download and Install Apache Maven[m
+[32m+[m[32mverbose "Couldn't find MAVEN_HOME, downloading and installing it ..."[m
+[32m+[m[32mverbose "Downloading from: $distributionUrl"[m
+[32m+[m[32mverbose "Downloading to: $TMP_DOWNLOAD_DIR/$distributionUrlName"[m
+[32m+[m
+[32m+[m[32m# select .zip or .tar.gz[m
+[32m+[m[32mif ! command -v unzip >/dev/null; then[m
+[32m+[m[32m  distributionUrl="${distributionUrl%.zip}.tar.gz"[m
+[32m+[m[32m  distributionUrlName="${distributionUrl##*/}"[m
+[32m+[m[32mfi[m
+[32m+[m
+[32m+[m[32m# verbose opt[m
+[32m+[m[32m__MVNW_QUIET_WGET=--quiet __MVNW_QUIET_CURL=--silent __MVNW_QUIET_UNZIP=-q __MVNW_QUIET_TAR=''[m
+[32m+[m[32m[ "${MVNW_VERBOSE-}" != true ] || __MVNW_QUIET_WGET='' __MVNW_QUIET_CURL='' __MVNW_QUIET_UNZIP='' __MVNW_QUIET_TAR=v[m
+[32m+[m
+[32m+[m[32m# normalize http auth[m
+[32m+[m[32mcase "${MVNW_PASSWORD:+has-password}" in[m
+[32m+[m[32m'') MVNW_USERNAME='' MVNW_PASSWORD='' ;;[m
+[32m+[m[32mhas-password) [ -n "${MVNW_USERNAME-}" ] || MVNW_USERNAME='' MVNW_PASSWORD='' ;;[m
+[32m+[m[32mesac[m
+[32m+[m
+[32m+[m[32mif [ -z "${MVNW_USERNAME-}" ] && command -v wget >/dev/null; then[m
+[32m+[m[32m  verbose "Found wget ... using wget"[m
+[32m+[m[32m  wget ${__MVNW_QUIET_WGET:+"$__MVNW_QUIET_WGET"} "$distributionUrl" -O "$TMP_DOWNLOAD_DIR/$distributionUrlName" || die "wget: Failed to fetch $distributionUrl"[m
+[32m+[m[32melif [ -z "${MVNW_USERNAME-}" ] && command -v curl >/dev/null; then[m
+[32m+[m[32m  verbose "Found curl ... using curl"[m
+[32m+[m[32m  curl ${__MVNW_QUIET_CURL:+"$__MVNW_QUIET_CURL"} -f -L -o "$TMP_DOWNLOAD_DIR/$distributionUrlName" "$distributionUrl" || die "curl: Failed to fetch $distributionUrl"[m
+[32m+[m[32melif set_java_home; then[m
+[32m+[m[32m  verbose "Falling back to use Java to download"[m
+[32m+[m[32m  javaSource="$TMP_DOWNLOAD_DIR/Downloader.java"[m
+[32m+[m[32m  targetZip="$TMP_DOWNLOAD_DIR/$distributionUrlName"[m
+[32m+[m[32m  cat >"$javaSource" <<-END[m
+[32m+[m	[32mpublic class Downloader extends java.net.Authenticator[m
+[32m+[m	[32m{[m
+[32m+[m	[32m  protected java.net.PasswordAuthentication getPasswordAuthentication()[m
+[32m+[m	[32m  {[m
+[32m+[m	[32m    return new java.net.PasswordAuthentication( System.getenv( "MVNW_USERNAME" ), System.getenv( "MVNW_PASSWORD" ).toCharArray() );[m
+[32m+[m	[32m  }[m
+[32m+[m	[32m  public static void main( String[] args ) throws Exception[m
+[32m+[m	[32m  {[m
+[32m+[m	[32m    setDefault( new Downloader() );[m
+[32m+[m	[32m    java.nio.file.Files.copy( java.net.URI.create( args[0] ).toURL().openStream(), java.nio.file.Paths.get( args[1] ).toAbsolutePath().normalize() );[m
+[32m+[m	[32m  }[m
+[32m+[m	[32m}[m
+[32m+[m	[32mEND[m
+[32m+[m[32m  # For Cygwin/MinGW, switch paths to Windows format before running javac and java[m
+[32m+[m[32m  verbose " - Compiling Downloader.java ..."[m
+[32m+[m[32m  "$(native_path "$JAVACCMD")" "$(native_path "$javaSource")" || die "Failed to compile Downloader.java"[m
+[32m+[m[32m  verbose " - Running Downloader.java ..."[m
+[32m+[m[32m  "$(native_path "$JAVACMD")" -cp "$(native_path "$TMP_DOWNLOAD_DIR")" Downloader "$distributionUrl" "$(native_path "$targetZip")"[m
+[32m+[m[32mfi[m
+[32m+[m
+[32m+[m[32m# If specified, validate the SHA-256 sum of the Maven distribution zip file[m
+[32m+[m[32mif [ -n "${distributionSha256Sum-}" ]; then[m
+[32m+[m[32m  distributionSha256Result=false[m
+[32m+[m[32m  if [ "$MVN_CMD" = mvnd.sh ]; then[m
+[32m+[m[32m    echo "Checksum validation is not supported for maven-mvnd." >&2[m
+[32m+[m[32m    echo "Please disable validation by removing 'distributionSha256Sum' from your maven-wrapper.properties." >&2[m
+[32m+[m[32m    exit 1[m
+[32m+[m[32m  elif command -v sha256sum >/dev/null; then[m
+[32m+[m[32m    if echo "$distributionSha256Sum  $TMP_DOWNLOAD_DIR/$distributionUrlName" | sha256sum -c >/dev/null 2>&1; then[m
+[32m+[m[32m      distributionSha256Result=true[m
+[32m+[m[32m    fi[m
+[32m+[m[32m  elif command -v shasum >/dev/null; then[m
+[32m+[m[32m    if echo "$distributionSha256Sum  $TMP_DOWNLOAD_DIR/$distributionUrlName" | shasum -a 256 -c >/dev/null 2>&1; then[m
+[32m+[m[32m      distributionSha256Result=true[m
+[32m+[m[32m    fi[m
+[32m+[m[32m  else[m
+[32m+[m[32m    echo "Checksum validation was requested but neither 'sha256sum' or 'shasum' are available." >&2[m
+[32m+[m[32m    echo "Please install either command, or disable validation by removing 'distributionSha256Sum' from your maven-wrapper.properties." >&2[m
+[32m+[m[32m    exit 1[m
+[32m+[m[32m  fi[m
+[32m+[m[32m  if [ $distributionSha256Result = false ]; then[m
+[32m+[m[32m    echo "Error: Failed to validate Maven distribution SHA-256, your Maven distribution might be compromised." >&2[m
+[32m+[m[32m    echo "If you updated your Maven version, you need to update the specified distributionSha256Sum property." >&2[m
+[32m+[m[32m    exit 1[m
+[32m+[m[32m  fi[m
+[32m+[m[32mfi[m
+[32m+[m
+[32m+[m[32m# unzip and move[m
+[32m+[m[32mif command -v unzip >/dev/null; then[m
+[32m+[m[32m  unzip ${__MVNW_QUIET_UNZIP:+"$__MVNW_QUIET_UNZIP"} "$TMP_DOWNLOAD_DIR/$distributionUrlName" -d "$TMP_DOWNLOAD_DIR" || die "failed to unzip"[m
+[32m+[m[32melse[m
+[32m+[m[32m  tar xzf${__MVNW_QUIET_TAR:+"$__MVNW_QUIET_TAR"} "$TMP_DOWNLOAD_DIR/$distributionUrlName" -C "$TMP_DOWNLOAD_DIR" || die "failed to untar"[m
+[32m+[m[32mfi[m
+[32m+[m[32mprintf %s\\n "$distributionUrl" >"$TMP_DOWNLOAD_DIR/$distributionUrlNameMain/mvnw.url"[m
+[32m+[m[32mmv -- "$TMP_DOWNLOAD_DIR/$distributionUrlNameMain" "$MAVEN_HOME" || [ -d "$MAVEN_HOME" ] || die "fail to move MAVEN_HOME"[m
+[32m+[m
+[32m+[m[32mclean || :[m
+[32m+[m[32mexec_maven "$@"[m
+[1mdiff --git a/mvnw.cmd b/mvnw.cmd[m
+[1mnew file mode 100644[m
+[1mindex 0000000..6f779cf[m
+[1m--- /dev/null[m
+[1m+++ b/mvnw.cmd[m
+[36m@@ -0,0 +1,149 @@[m
+[32m+[m[32m<# : batch portion[m
+[32m+[m[32m@REM ----------------------------------------------------------------------------[m
+[32m+[m[32m@REM Licensed to the Apache Software Foundation (ASF) under one[m
+[32m+[m[32m@REM or more contributor license agreements.  See the NOTICE file[m
+[32m+[m[32m@REM distributed with this work for additional information[m
+[32m+[m[32m@REM regarding copyright ownership.  The ASF licenses this file[m
+[32m+[m[32m@REM to you under the Apache License, Version 2.0 (the[m
+[32m+[m[32m@REM "License"); you may not use this file except in compliance[m
+[32m+[m[32m@REM with the License.  You may obtain a copy of the License at[m
+[32m+[m[32m@REM[m
+[32m+[m[32m@REM    https://www.apache.org/licenses/LICENSE-2.0[m
+[32m+[m[32m@REM[m
+[32m+[m[32m@REM Unless required by applicable law or agreed to in writing,[m
+[32m+[m[32m@REM software distributed under the License is distributed on an[m
+[32m+[m[32m@REM "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY[m
+[32m+[m[32m@REM KIND, either express or implied.  See the License for the[m
+[32m+[m[32m@REM specific language governing permissions and limitations[m
+[32m+[m[32m@REM under the License.[m
+[32m+[m[32m@REM ----------------------------------------------------------------------------[m
+[32m+[m
+[32m+[m[32m@REM ----------------------------------------------------------------------------[m
+[32m+[m[32m@REM Apache Maven Wrapper startup batch script, version 3.3.2[m
+[32m+[m[32m@REM[m
+[32m+[m[32m@REM Optional ENV vars[m
+[32m+[m[32m@REM   MVNW_REPOURL - repo url base for downloading maven distribution[m
+[32m+[m[32m@REM   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven[m
+[32m+[m[32m@REM   MVNW_VERBOSE - true: enable verbose log; others: silence the output[m
+[32m+[m[32m@REM ----------------------------------------------------------------------------[m
+[32m+[m
+[32m+[m[32m@IF "%__MVNW_ARG0_NAME__%"=="" (SET __MVNW_ARG0_NAME__=%~nx0)[m
+[32m+[m[32m@SET __MVNW_CMD__=[m
+[32m+[m[32m@SET __MVNW_ERROR__=[m
+[32m+[m[32m@SET __MVNW_PSMODULEP_SAVE=%PSModulePath%[m
+[32m+[m[32m@SET PSModulePath=[m
+[32m+[m[32m@FOR /F "usebackq tokens=1* delims==" %%A IN (`powershell -noprofile "& {$scriptDir='%~dp0'; $script='%__MVNW_ARG0_NAME__%'; icm -ScriptBlock ([Scriptblock]::Create((Get-Content -Raw '%~f0'))) -NoNewScope}"`) DO @([m
+[32m+[m[32m  IF "%%A"=="MVN_CMD" (set __MVNW_CMD__=%%B) ELSE IF "%%B"=="" (echo %%A) ELSE (echo %%A=%%B)[m
+[32m+[m[32m)[m
+[32m+[m[32m@SET PSModulePath=%__MVNW_PSMODULEP_SAVE%[m
+[32m+[m[32m@SET __MVNW_PSMODULEP_SAVE=[m
+[32m+[m[32m@SET __MVNW_ARG0_NAME__=[m
+[32m+[m[32m@SET MVNW_USERNAME=[m
+[32m+[m[32m@SET MVNW_PASSWORD=[m
+[32m+[m[32m@IF NOT "%__MVNW_CMD__%"=="" (%__MVNW_CMD__% %*)[m
+[32m+[m[32m@echo Cannot start maven from wrapper >&2 && exit /b 1[m
+[32m+[m[32m@GOTO :EOF[m
+[32m+[m[32m: end batch / begin powershell #>[m
+[32m+[m
+[32m+[m[32m$ErrorActionPreference = "Stop"[m
+[32m+[m[32mif ($env:MVNW_VERBOSE -eq "true") {[m
+[32m+[m[32m  $VerbosePreference = "Continue"[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# calculate distributionUrl, requires .mvn/wrapper/maven-wrapper.properties[m
+[32m+[m[32m$distributionUrl = (Get-Content -Raw "$scriptDir/.mvn/wrapper/maven-wrapper.properties" | ConvertFrom-StringData).distributionUrl[m
+[32m+[m[32mif (!$distributionUrl) {[m
+[32m+[m[32m  Write-Error "cannot read distributionUrl property in $scriptDir/.mvn/wrapper/maven-wrapper.properties"[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mswitch -wildcard -casesensitive ( $($distributionUrl -replace '^.*/','') ) {[m
+[32m+[m[32m  "maven-mvnd-*" {[m
+[32m+[m[32m    $USE_MVND = $true[m
+[32m+[m[32m    $distributionUrl = $distributionUrl -replace '-bin\.[^.]*$',"-windows-amd64.zip"[m
+[32m+[m[32m    $MVN_CMD = "mvnd.cmd"[m
+[32m+[m[32m    break[m
+[32m+[m[32m  }[m
+[32m+[m[32m  default {[m
+[32m+[m[32m    $USE_MVND = $false[m
+[32m+[m[32m    $MVN_CMD = $script -replace '^mvnw','mvn'[m
+[32m+[m[32m    break[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# apply MVNW_REPOURL and calculate MAVEN_HOME[m
+[32m+[m[32m# maven home pattern: ~/.m2/wrapper/dists/{apache-maven-<version>,maven-mvnd-<version>-<platform>}/<hash>[m
+[32m+[m[32mif ($env:MVNW_REPOURL) {[m
+[32m+[m[32m  $MVNW_REPO_PATTERN = if ($USE_MVND) { "/org/apache/maven/" } else { "/maven/mvnd/" }[m
+[32m+[m[32m  $distributionUrl = "$env:MVNW_REPOURL$MVNW_REPO_PATTERN$($distributionUrl -replace '^.*'+$MVNW_REPO_PATTERN,'')"[m
+[32m+[m[32m}[m
+[32m+[m[32m$distributionUrlName = $distributionUrl -replace '^.*/',''[m
+[32m+[m[32m$distributionUrlNameMain = $distributionUrlName -replace '\.[^.]*$','' -replace '-bin$',''[m
+[32m+[m[32m$MAVEN_HOME_PARENT = "$HOME/.m2/wrapper/dists/$distributionUrlNameMain"[m
+[32m+[m[32mif ($env:MAVEN_USER_HOME) {[m
+[32m+[m[32m  $MAVEN_HOME_PARENT = "$env:MAVEN_USER_HOME/wrapper/dists/$distributionUrlNameMain"[m
+[32m+[m[32m}[m
+[32m+[m[32m$MAVEN_HOME_NAME = ([System.Security.Cryptography.MD5]::Create().ComputeHash([byte[]][char[]]$distributionUrl) | ForEach-Object {$_.ToString("x2")}) -join ''[m
+[32m+[m[32m$MAVEN_HOME = "$MAVEN_HOME_PARENT/$MAVEN_HOME_NAME"[m
+[32m+[m
+[32m+[m[32mif (Test-Path -Path "$MAVEN_HOME" -PathType Container) {[m
+[32m+[m[32m  Write-Verbose "found existing MAVEN_HOME at $MAVEN_HOME"[m
+[32m+[m[32m  Write-Output "MVN_CMD=$MAVEN_HOME/bin/$MVN_CMD"[m
+[32m+[m[32m  exit $?[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mif (! $distributionUrlNameMain -or ($distributionUrlName -eq $distributionUrlNameMain)) {[m
+[32m+[m[32m  Write-Error "distributionUrl is not valid, must end with *-bin.zip, but found $distributionUrl"[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# prepare tmp dir[m
+[32m+[m[32m$TMP_DOWNLOAD_DIR_HOLDER = New-TemporaryFile[m
+[32m+[m[32m$TMP_DOWNLOAD_DIR = New-Item -Itemtype Directory -Path "$TMP_DOWNLOAD_DIR_HOLDER.dir"[m
+[32m+[m[32m$TMP_DOWNLOAD_DIR_HOLDER.Delete() | Out-Null[m
+[32m+[m[32mtrap {[m
+[32m+[m[32m  if ($TMP_DOWNLOAD_DIR.Exists) {[m
+[32m+[m[32m    try { Remove-Item $TMP_DOWNLOAD_DIR -Recurse -Force | Out-Null }[m
+[32m+[m[32m    catch { Write-Warning "Cannot remove $TMP_DOWNLOAD_DIR" }[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mNew-Item -Itemtype Directory -Path "$MAVEN_HOME_PARENT" -Force | Out-Null[m
+[32m+[m
+[32m+[m[32m# Download and Install Apache Maven[m
+[32m+[m[32mWrite-Verbose "Couldn't find MAVEN_HOME, downloading and installing it ..."[m
+[32m+[m[32mWrite-Verbose "Downloading from: $distributionUrl"[m
+[32m+[m[32mWrite-Verbose "Downloading to: $TMP_DOWNLOAD_DIR/$distributionUrlName"[m
+[32m+[m
+[32m+[m[32m$webclient = New-Object System.Net.WebClient[m
+[32m+[m[32mif ($env:MVNW_USERNAME -and $env:MVNW_PASSWORD) {[m
+[32m+[m[32m  $webclient.Credentials = New-Object System.Net.NetworkCredential($env:MVNW_USERNAME, $env:MVNW_PASSWORD)[m
+[32m+[m[32m}[m
+[32m+[m[32m[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12[m
+[32m+[m[32m$webclient.DownloadFile($distributionUrl, "$TMP_DOWNLOAD_DIR/$distributionUrlName") | Out-Null[m
+[32m+[m
+[32m+[m[32m# If specified, validate the SHA-256 sum of the Maven distribution zip file[m
+[32m+[m[32m$distributionSha256Sum = (Get-Content -Raw "$scriptDir/.mvn/wrapper/maven-wrapper.properties" | ConvertFrom-StringData).distributionSha256Sum[m
+[32m+[m[32mif ($distributionSha256Sum) {[m
+[32m+[m[32m  if ($USE_MVND) {[m
+[32m+[m[32m    Write-Error "Checksum validation is not supported for maven-mvnd. `nPlease disable validation by removing 'distributionSha256Sum' from your maven-wrapper.properties."[m
+[32m+[m[32m  }[m
+[32m+[m[32m  Import-Module $PSHOME\Modules\Microsoft.PowerShell.Utility -Function Get-FileHash[m
+[32m+[m[32m  if ((Get-FileHash "$TMP_DOWNLOAD_DIR/$distributionUrlName" -Algorithm SHA256).Hash.ToLower() -ne $distributionSha256Sum) {[m
+[32m+[m[32m    Write-Error "Error: Failed to validate Maven distribution SHA-256, your Maven distribution might be compromised. If you updated your Maven version, you need to update the specified distributionSha256Sum property."[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m# unzip and move[m
+[32m+[m[32mExpand-Archive "$TMP_DOWNLOAD_DIR/$distributionUrlName" -DestinationPath "$TMP_DOWNLOAD_DIR" | Out-Null[m
+[32m+[m[32mRename-Item -Path "$TMP_DOWNLOAD_DIR/$distributionUrlNameMain" -NewName $MAVEN_HOME_NAME | Out-Null[m
+[32m+[m[32mtry {[m
+[32m+[m[32m  Move-Item -Path "$TMP_DOWNLOAD_DIR/$MAVEN_HOME_NAME" -Destination $MAVEN_HOME_PARENT | Out-Null[m
+[32m+[m[32m} catch {[m
+[32m+[m[32m  if (! (Test-Path -Path "$MAVEN_HOME" -PathType Container)) {[m
+[32m+[m[32m    Write-Error "fail to move MAVEN_HOME"[m
+[32m+[m[32m  }[m
+[32m+[m[32m} finally {[m
+[32m+[m[32m  try { Remove-Item $TMP_DOWNLOAD_DIR -Recurse -Force | Out-Null }[m
+[32m+[m[32m  catch { Write-Warning "Cannot remove $TMP_DOWNLOAD_DIR" }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mWrite-Output "MVN_CMD=$MAVEN_HOME/bin/$MVN_CMD"[m
+[1mdiff --git a/pom.xml b/pom.xml[m
+[1mnew file mode 100644[m
+[1mindex 0000000..0513167[m
+[1m--- /dev/null[m
+[1m+++ b/pom.xml[m
+[36m@@ -0,0 +1,103 @@[m
+[32m+[m[32m<?xml version="1.0" encoding="UTF-8"?>[m
+[32m+[m[32m<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"[m
+[32m+[m	[32mxsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">[m
+[32m+[m	[32m<modelVersion>4.0.0</modelVersion>[m
+[32m+[m	[32m<parent>[m
+[32m+[m		[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m		[32m<artifactId>spring-boot-starter-parent</artifactId>[m
+[32m+[m		[32m<version>3.3.1</version>[m
+[32m+[m		[32m<relativePath/> <!-- lookup parent from repository -->[m
+[32m+[m	[32m</parent>[m
+[32m+[m	[32m<groupId>br.com.alura</groupId>[m
+[32m+[m	[32m<artifactId>ForumHub</artifactId>[m
+[32m+[m	[32m<version>0.0.1-SNAPSHOT</version>[m
+[32m+[m	[32m<name>ForumHub</name>[m
+[32m+[m	[32m<description>Demo project for Spring Boot</description>[m
+[32m+[m	[32m<url/>[m
+[32m+[m	[32m<licenses>[m
+[32m+[m		[32m<license/>[m
+[32m+[m	[32m</licenses>[m
+[32m+[m	[32m<developers>[m
+[32m+[m		[32m<developer/>[m
+[32m+[m	[32m</developers>[m
+[32m+[m	[32m<scm>[m
+[32m+[m		[32m<connection/>[m
+[32m+[m		[32m<developerConnection/>[m
+[32m+[m		[32m<tag/>[m
+[32m+[m		[32m<url/>[m
+[32m+[m	[32m</scm>[m
+[32m+[m	[32m<properties>[m
+[32m+[m		[32m<java.version>17</java.version>[m
+[32m+[m	[32m</properties>[m
+[32m+[m	[32m<dependencies>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m			[32m<artifactId>spring-boot-starter-data-jpa</artifactId>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m[32m<!--		<dependency>-->[m
+[32m+[m[32m<!--			<groupId>org.springframework.boot</groupId>-->[m
+[32m+[m[32m<!--			<artifactId>spring-boot-starter-security</artifactId>-->[m
+[32m+[m[32m<!--		</dependency>-->[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m			[32m<artifactId>spring-boot-starter-validation</artifactId>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m			[32m<artifactId>spring-boot-starter-web</artifactId>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.flywaydb</groupId>[m
+[32m+[m			[32m<artifactId>flyway-core</artifactId>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.flywaydb</groupId>[m
+[32m+[m			[32m<artifactId>flyway-mysql</artifactId>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m			[32m<artifactId>spring-boot-devtools</artifactId>[m
+[32m+[m			[32m<scope>runtime</scope>[m
+[32m+[m			[32m<optional>true</optional>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>com.mysql</groupId>[m
+[32m+[m			[32m<artifactId>mysql-connector-j</artifactId>[m
+[32m+[m			[32m<scope>runtime</scope>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.projectlombok</groupId>[m
+[32m+[m			[32m<artifactId>lombok</artifactId>[m
+[32m+[m			[32m<optional>true</optional>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m			[32m<artifactId>spring-boot-starter-test</artifactId>[m
+[32m+[m			[32m<scope>test</scope>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m[32m<!--		<dependency>-->[m
+[32m+[m[32m<!--			<groupId>org.springframework.security</groupId>-->[m
+[32m+[m[32m<!--			<artifactId>spring-security-test</artifactId>-->[m
+[32m+[m[32m<!--			<scope>test</scope>-->[m
+[32m+[m[32m<!--		</dependency>-->[m
+[32m+[m	[32m</dependencies>[m
+[32m+[m
+[32m+[m	[32m<build>[m
+[32m+[m		[32m<plugins>[m
+[32m+[m			[32m<plugin>[m
+[32m+[m				[32m<groupId>org.springframework.boot</groupId>[m
+[32m+[m				[32m<artifactId>spring-boot-maven-plugin</artifactId>[m
+[32m+[m				[32m<configuration>[m
+[32m+[m					[32m<excludes>[m
+[32m+[m						[32m<exclude>[m
+[32m+[m							[32m<groupId>org.projectlombok</groupId>[m
+[32m+[m							[32m<artifactId>lombok</artifactId>[m
+[32m+[m						[32m</exclude>[m
+[32m+[m					[32m</excludes>[m
+[32m+[m				[32m</configuration>[m
+[32m+[m			[32m</plugin>[m
+[32m+[m		[32m</plugins>[m
+[32m+[m	[32m</build>[m
+[32m+[m
+[32m+[m[32m</project>[m
+[1mdiff --git a/src/main/java/br/com/alura/ForumHub/ForumHubApplication.java b/src/main/java/br/com/alura/ForumHub/ForumHubApplication.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d7b7441[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/alura/ForumHub/ForumHubApplication.java[m
+[36m@@ -0,0 +1,13 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub;[m
+[32m+[m
+[32m+[m[32mimport org.springframework.boot.SpringApplication;[m
+[32m+[m[32mimport org.springframework.boot.autoconfigure.SpringBootApplication;[m
+[32m+[m
+[32m+[m[32m@SpringBootApplication[m
+[32m+[m[32mpublic class ForumHubApplication {[m
+[32m+[m
+[32m+[m	[32mpublic static void main(String[] args) {[m
+[32m+[m		[32mSpringApplication.run(ForumHubApplication.class, args);[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/resources/application.properties b/src/main/resources/application.properties[m
+[1mnew file mode 100644[m
+[1mindex 0000000..3a41917[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/application.properties[m
+[36m@@ -0,0 +1,14 @@[m
+[32m+[m[32mspring.application.name=ForumHub[m
+[32m+[m[32mspring.datasource.username=root[m
+[32m+[m[32mspring.datasource.password=Slcbanco@123[m
+[32m+[m[32mspring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver[m
+[32m+[m[32mspring.datasource.url=jdbc:mysql://localhost/forumhub_api?createDatabaseIfNotExist=true[m
+[32m+[m
+[32m+[m[32mspring.jpa.show-sql=true[m
+[32m+[m[32mspring.jpa.properties.hibernate.format_sql=true[m
+[32m+[m
+[32m+[m[32mserver.error.include-stacktrace=never[m
+[32m+[m
+[32m+[m[32mapi.security.token.secret=S{JWT_SECRET:12345678}[m
+[32m+[m
+[32m+[m
+[1mdiff --git a/src/main/resources/db/migration/V1__create-table-curso.sql b/src/main/resources/db/migration/V1__create-table-curso.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..eef637f[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V1__create-table-curso.sql[m
+[36m@@ -0,0 +1,6 @@[m
+[32m+[m[32mCREATE TABLE Curso ([m
+[32m+[m[32m    id BIGINT NOT NULL AUTO_INCREMENT,[m
+[32m+[m[32m    nome VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    categoria VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/resources/db/migration/V2__create-table-perfil.sql b/src/main/resources/db/migration/V2__create-table-perfil.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..8cdfa1b[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V2__create-table-perfil.sql[m
+[36m@@ -0,0 +1,5 @@[m
+[32m+[m[32mCREATE TABLE Perfil ([m
+[32m+[m[32m    id BIGINT NOT NULL AUTO_INCREMENT,[m
+[32m+[m[32m    nome VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/resources/db/migration/V3__create-table-usuario.sql b/src/main/resources/db/migration/V3__create-table-usuario.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..cecc37c[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V3__create-table-usuario.sql[m
+[36m@@ -0,0 +1,7 @@[m
+[32m+[m[32mCREATE TABLE Usuario ([m
+[32m+[m[32m    id BIGINT NOT NULL AUTO_INCREMENT,[m
+[32m+[m[32m    nome VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    email VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    senha VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/resources/db/migration/V4__create-table-topico.sql b/src/main/resources/db/migration/V4__create-table-topico.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..9db0f46[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V4__create-table-topico.sql[m
+[36m@@ -0,0 +1,12 @@[m
+[32m+[m[32mCREATE TABLE Topico ([m
+[32m+[m[32m    id BIGINT NOT NULL AUTO_INCREMENT,[m
+[32m+[m[32m    titulo VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    mensagem TEXT NOT NULL,[m
+[32m+[m[32m    dataCriacao DATETIME NOT NULL,[m
+[32m+[m[32m    status VARCHAR(255) NOT NULL,[m
+[32m+[m[32m    autor BIGINT NOT NULL,[m
+[32m+[m[32m    curso BIGINT NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (id),[m
+[32m+[m[32m    FOREIGN KEY (autor) REFERENCES Usuario(id),[m
+[32m+[m[32m    FOREIGN KEY (curso) REFERENCES Curso(id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/resources/db/migration/V5__create-table-resposta.sql b/src/main/resources/db/migration/V5__create-table-resposta.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d579e8d[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V5__create-table-resposta.sql[m
+[36m@@ -0,0 +1,11 @@[m
+[32m+[m[32mCREATE TABLE Resposta ([m
+[32m+[m[32m    id BIGINT NOT NULL AUTO_INCREMENT,[m
+[32m+[m[32m    mensagem TEXT NOT NULL,[m
+[32m+[m[32m    topico BIGINT NOT NULL,[m
+[32m+[m[32m    dataCriacao DATETIME NOT NULL,[m
+[32m+[m[32m    autor BIGINT NOT NULL,[m
+[32m+[m[32m    solucao BOOLEAN NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (id),[m
+[32m+[m[32m    FOREIGN KEY (topico) REFERENCES Topico(id),[m
+[32m+[m[32m    FOREIGN KEY (autor) REFERENCES Usuario(id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/main/resources/db/migration/V6__create-table-usuario-perfil.sql b/src/main/resources/db/migration/V6__create-table-usuario-perfil.sql[m
+[1mnew file mode 100644[m
+[1mindex 0000000..a23f147[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/resources/db/migration/V6__create-table-usuario-perfil.sql[m
+[36m@@ -0,0 +1,7 @@[m
+[32m+[m[32mCREATE TABLE Usuario_Perfil ([m
+[32m+[m[32m    usuario_id BIGINT NOT NULL,[m
+[32m+[m[32m    perfil_id BIGINT NOT NULL,[m
+[32m+[m[32m    PRIMARY KEY (usuario_id, perfil_id),[m
+[32m+[m[32m    FOREIGN KEY (usuario_id) REFERENCES Usuario(id),[m
+[32m+[m[32m    FOREIGN KEY (perfil_id) REFERENCES Perfil(id)[m
+[32m+[m[32m);[m
+\ No newline at end of file[m
+[1mdiff --git a/src/test/java/br/com/alura/ForumHub/ForumHubApplicationTests.java b/src/test/java/br/com/alura/ForumHub/ForumHubApplicationTests.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7cfaae1[m
+[1m--- /dev/null[m
+[1m+++ b/src/test/java/br/com/alura/ForumHub/ForumHubApplicationTests.java[m
+[36m@@ -0,0 +1,13 @@[m
+[32m+[m[32mpackage br.com.alura.ForumHub;[m
+[32m+[m
+[32m+[m[32mimport org.junit.jupiter.api.Test;[m
+[32m+[m[32mimport org.springframework.boot.test.context.SpringBootTest;[m
+[32m+[m
+[32m+[m[32m@SpringBootTest[m
+[32m+[m[32mclass ForumHubApplicationTests {[m
+[32m+[m
+[32m+[m	[32m@Test[m
+[32m+[m	[32mvoid contextLoads() {[m
+[32m+[m	[32m}[m
+[32m+[m
+[32m+[m[32m}[m
